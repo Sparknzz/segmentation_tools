@@ -2,12 +2,9 @@ import random
 import numpy as np
 
 from .annotation import Annotation
-from .category import Category
-from .basic import Semantic
-from .image import Image
 
 
-class Dataset(Semantic):
+class Dataset(object):
     @classmethod
     def from_xml(cls, xml_folder, name="XML Dataset"):
         extensions = ("jpg","JPG","png")
@@ -182,74 +179,5 @@ class Dataset(Semantic):
         """
         for _, category in self.categories.items():
             yield category
-
-    def split(self, ratios, random=False):
-        """
-        Splits dataset images into mutiple sub datasets of the given ratios
-
-        If a tuple of (1, 1, 2) was passed in the result would return 3 dataset
-        objects of 25%, 25% and 50% of the images.
-
-        .. code-block:: python
-
-            percents = ratios / ratios.sum()
-
-        :param ratios: ratios to split dataset into
-        :type ratios: tuple, list
-        :param random: randomize the images before spliting
-        :returns: tuple of datasets with length of the number of ratios
-        :rtype: tuple
-        """
-
-        if len(ratios) >= len(self.images):
-            raise ValueError("Too many values in ratio array compared to dataset size")
-
-        ratios = np.array(ratios)
-        percents = ratios / ratios.sum()
-
-        if percents.sum() != 1:
-            raise ValueError("Percents don't add up to 100%")
-
-        percents = percents[:-1] # don't need last percent, just take what is left
-        percents *= len(self.images) # how many images in each dataset
-        percents = percents.round().astype(np.int) # prepare where we split
-
-        if random:
-            im = random.sample(list(self.images.keys()))
-        else:
-            im = list(self.images.keys())
-
-        splits = np.split(im, percents)
-
-        datasets = []
-        for idx, split in enumerate(splits):
-            tmp_images = []
-
-            for key in split:
-                # get all images corresponding to the split's keys
-                tmp_images.append(self.images.get(key))
-
-            dataset = Dataset("split" + str(idx), images=tmp_images)
-            datasets.append(dataset)
-
-        return datasets
-
-    def coco(self):
-        coco = {
-            'info': {},
-            'categories': [c.coco(include=False) for c in self.iter_categories()],
-            'images': [i.coco(include=False) for i in self.iter_images()],
-            'annotations': [a.coco(include=False) for a in self.iter_annotations()]
-        }
-
-        return coco
-
-    def yolo(self):
-        yolo = {}
-
-        for image in self.iter_images():
-            yolo[image.path] = image.yolo()
-        
-        return yolo
 
 __all__ = ["Dataset"]

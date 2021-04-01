@@ -1,12 +1,10 @@
-from lxml import etree as ET
-from lxml.builder import E
 import numpy as np
 import json
 import cv2
 
 from .color import Color
 
-class Annotation(Semantic):
+class Annotation(object):
     """
     Annotation is a marking on an image.
 
@@ -27,21 +25,7 @@ class Annotation(Semantic):
         :type mask: :class:`Mask`, numpy.ndarray, list
         """
         return cls(image=image, category=category, mask=mask)
-    
-    @classmethod
-    def from_bbox(cls, bbox, image=None, category=None):
-        """
-        Creates annotation from bounding box
 
-        :param image: image assoicated with annotation
-        :type image: :class:`Image` 
-        :param category: category to label annotation
-        :type category: :class:`Category` 
-        :param polygons: bbox to create annotation from
-        :type polygons: :class:`BBox`, list, tuple
-        """
-        return cls(image=image, category=category, bbox=bbox)
-    
     @classmethod
     def from_polygons(cls, polygons, image=None, category=None):
         """
@@ -85,7 +69,7 @@ class Annotation(Semantic):
                  color=None, metadata={}, width=0, height=0):
         
         assert isinstance(id, int), "id must be an integer"
-        assert bbox or mask or polygons, "you must provide a mask, bbox or polygon"
+        # assert bbox or mask or polygons, "you must provide a mask, bbox or polygon"
 
         self.image = image
         self.width = width
@@ -93,12 +77,13 @@ class Annotation(Semantic):
 
 
         if image is not None:
-            self.width = image.width
-            self.height = image.height
+            self.width = image.shape[1]
+            self.height = image.shape[0]
         
         self.category = category
         self.color = Color.create(color)
         self._c_bbox = BBox.create(bbox)
+
         self._c_mask = Mask.create(mask)
         self._c_polygons = Polygons.create(polygons)
 
@@ -114,7 +99,7 @@ class Annotation(Semantic):
             if self._init_with_mask:
                 self.height, self.width = self._c_mask.array.shape
 
-        super(Annotation, self).__init__(id, metadata)
+        super(Annotation, self).__init__()
 
     @property
     def mask(self):
@@ -317,10 +302,6 @@ class Annotation(Semantic):
         )
         
         return element
-    
-    def save(self, file_path, style=COCO):
-        with open(file_path, 'w') as fp:
-            json.dump(self.export(style=style), fp)
 
 
 class BBox:
@@ -561,6 +542,7 @@ class BBox:
         return False
 
 
+
 class Polygons:
     
     #: Polygon instance types
@@ -729,7 +711,6 @@ class Polygons:
     def __repr__(self):
         return repr(self.polygons)
 
-
 class Mask:
     """
     Mask class
@@ -796,14 +777,16 @@ class Mask:
             # Generate polygons from mask
             mask = self.array.astype(np.uint8)
             mask = cv2.copyMakeBorder(mask, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=0)
-            polygons = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE, offset=(-1, -1))
-            polygons = polygons[0] if len(polygons) == 2 else polygons[1]
+            ret = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE, offset=(-1, -1))
+            polygons = ret[0] if len(ret) == 2 else ret[1]
+            hierarchy = ret[1] if len(ret) == 2 else ret[2]
+            
             polygons = [polygon.flatten() for polygon in polygons]
 
             self._c_polygons = Polygons(polygons)
             self._c_polygons._c_mask = self
 
-        return self._c_polygons
+        return self._c_polygons, hierarchy
     
     def union(self, other):
         """
@@ -964,4 +947,4 @@ class Mask:
         return repr(self.array)
 
 
-__all__ = ["Annotation", "BBox", "Mask", "Polygons"]
+__all__ = ["Annotation", "Mask", "Polygons"]
