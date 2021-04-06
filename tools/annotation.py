@@ -777,7 +777,7 @@ class Mask:
             # Generate polygons from mask
             mask = self.array.astype(np.uint8)
             mask = cv2.copyMakeBorder(mask, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=0)
-            ret = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE, offset=(-1, -1))
+            ret = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE, offset=(-1, -1))
             polygons = ret[0] if len(ret) == 2 else ret[1]
             hierarchy = ret[1] if len(ret) == 2 else ret[2]
             

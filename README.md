@@ -5,5 +5,5 @@ With many image annotation semantics existing in the field of computer vision, i
 
 Currently Support Formats:
 
-- COCO Format
 - Binary Masks
+- Labelme Json Format
